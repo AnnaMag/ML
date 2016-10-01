@@ -23,11 +23,14 @@ class Perceptron(object):
         return np.dot(X, self.weights[1:]) + self.weights[0];
 
     def update(self, x, target):
-        update = self.eta * (target - self.predict(x));
-        self.weights[1:] +=  update * x;
+        target_vs_output = self.eta * (target - self.predict(x));
+
+
+        self.weights[1:] +=  target_vs_output * x;
         # x0 = 1, so
-        self.weights[0] +=  update;
-        self.errors_it += int(update != 0.0);
+        self.weights[0] +=  target_vs_output;
+        # number of misclassifications
+        self.errors_it += int(target_vs_output != 0.0);
         return self
     def predict(self, X):
         return np.where(self.project(X) >= 0.0, 1, -1)
