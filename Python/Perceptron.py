@@ -12,7 +12,7 @@ class Perceptron(object):
         self.weights = np.zeros(1 + X.shape[1])
         self.errors = []
 
-        # for a number of epochs
+        # for a number of epochs, in principle it should be reshaffled
         for _ in range(self.epochs):
             self.errors_it = 0;
             [self.update(xi, target) for xi, target in zip(X, y)]
