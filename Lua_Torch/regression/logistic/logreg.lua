@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------
--- ex-logistic-regression.lua
+-- logreg.lua
 --
 -- Multinomial logistic regression
 --
@@ -10,7 +10,7 @@ require 'nn'
 require 'optim'
 require 'csvigo'
 
-data = csvigo.load('example-logistic-regression.csv')
+data = csvigo.load('data.csv')
 
 brands = torch.Tensor(data.brand)
 females = torch.Tensor(data.female)
@@ -118,43 +118,78 @@ print('')
 
 for i = 1,epochs do
 
-   -- this variable is used to estimate the average loss
+   -- the average loss
    current_loss = 0
 
-   -- an epoch is a full loop over our training data
+   -- epochs
    for i = 1,(#dataset_inputs)[1] do
 
-      -- optim contains several optimization algorithms.
-      -- All of these algorithms assume the same parameters:
+      -- optim parameters:
       --   + a closure that computes the loss, and its gradient wrt to x,
       --     given a point x
       --   + a point x
-      --   + some parameters, which are algorithm-specific
+      --   + algorithm-specific parameters
 
-      _,fs = optim.sgd(feval,x,sgd_params)
+      _,fs = optim.sgd(feval, x, sgd_params)
 
-      -- Functions in optim all return two things:
-      --   + the new x, found by the optimization method (here SGD)
+      -- Optim returs:
+      --   + the new x, found by the optimization method
       --   + the value of the loss functions at all points that were used by
       --     the algorithm. SGD only estimates the function once, so
       --     that list just contains one value.
 
       current_loss = current_loss + fs[1]
    end
-
    -- report average error on epoch
    current_loss = current_loss / (#dataset_inputs)[1]
    print('epoch = ' .. i ..
 	 ' of ' .. epochs ..
 	 ' current loss = ' .. current_loss)
 end
+
 print(x)
-
-
+-- return index of largest value
 function maxIndex(a,b,c)
    if a >=b and a >= c then return 1
    elseif b >= a and b >= c then return 2
    else return 3 end
 end
-local s = maxIndex(1,2,3)
-print(s)
+
+-- known values(external source)
+function predictBrand(age, female)
+   -- calculate the "logit's"
+   --
+   local logit1 = 0
+   local logit2 = -11.774655 + 0.523814 * female + 0.368206 * age
+   local logit3 = -22.721396 + 0.465941 * female + 0.685908 * age
+
+   --   2: calculate the unnormalized probabilities
+   local uprob1 = math.exp(logit1)
+   local uprob2 = math.exp(logit2)
+   local uprob3 = math.exp(logit3)
+
+   --   3: normalize the probabilities
+   local z = uprob1 + uprob2 + uprob3
+   local prob1 = (1/z) * uprob1
+   local prob2 = (1/z) * uprob2
+   local prob3 = (1/z) * uprob3
+
+   return maxIndex(prob1, prob2, prob3), prob1, prob2, prob3
+end
+
+-- return predicted brand and the probabilities of each brand
+-- for this model
+function prediction(age, female)
+   local input = torch.Tensor(2)
+   input[1] = female  -- maintain the order of variables
+   input[2] = age
+   local logProbs = model:forward(input)
+   print('predictOur', age, female, input)
+   local probs = torch.exp(logProbs)
+   print('logProbs', logProbs)
+   print('probs', probs[1], probs[2], probs[3] )
+   local prob1, prob2, prob3 = probs[1], probs[2], probs[3]
+   return maxIndex(prob1, prob2, prob3), prob1, prob2, prob3
+end
+
+print(model:forward(input) )
