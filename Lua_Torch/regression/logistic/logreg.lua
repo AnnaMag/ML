@@ -145,6 +145,65 @@ for i = 1,epochs do
    print('epoch = ' .. i ..	 ' current loss = ' .. current_loss)
 end
 
+-- training with L-BFGS
+print('============================================================')
+print('Training with L-BFGS')
+print('')
+lbfgs_params = {
+   lineSearch = optim.lswolfe,
+   maxIter = epochs,
+   verbose = true
+}
+model:reset()
+feval = function(x_new)
+   -- set x to x_new, if differnt
+   -- (in this simple example, x_new will typically always point to x,
+   -- so the copy is really useless)
+   if x ~= x_new then
+      x:copy(x_new)
+   end
+
+   -- reset gradients (gradients are always accumulated by default,
+   --to accomodate batch methods)
+   dl_dx:zero()
+
+   -- and batch over the whole training dataset:
+   local loss_x = 0
+   for i = 1,(#dataset_inputs)[1] do
+      -- select a new training sample
+      _nidx_ = (_nidx_ or 0) + 1
+      if _nidx_ > (#dataset_inputs)[1] then _nidx_ = 1 end
+
+      local inputs = dataset_inputs[_nidx_]
+      local target = dataset_outputs[_nidx_]
+
+      -- evaluate the loss function and its derivative wrt x, for that sample
+      loss_x = loss_x + criterion:forward(model:forward(inputs), target)
+      model:backward(inputs, criterion:backward(model.output, target))
+   end
+
+   -- normalize with batch size
+   loss_x = loss_x / (#dataset_inputs)[1]
+   dl_dx = dl_dx:div( (#dataset_inputs)[1] )
+
+   -- return loss(x) and dloss/dx
+   return loss_x, dl_dx
+end
+
+-- L-BFGS parameters are different than SGD:
+--   + a line search: we provide a line search, which aims at
+--                    finding the point that minimizes the loss locally
+--   + max nb of iterations: the maximum number of iterations for the batch,
+--                           which is equivalent to the number of epochs
+--                           on the given batch. In that example, it's simple
+--                           because the batch is the full dataset, but in
+--                           some cases, the batch can be a small subset
+--                           of the full dataset, in which case maxIter
+--                           becomes a more subtle parameter.
+
+
+_,fs = optim.lbfgs(feval,x,lbfgs_params)
+
 -- return index of largest value
 function maxIndex(a,b,c)
    if a >=b and a >= c then return 1
