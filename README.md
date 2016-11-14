@@ -1,2 +1,1 @@
-# ML
-Machine learning, AI, Neural Nets, Deep learning: Torch and Python
+# Experiments and tests: Math/Stats/ML in Torch and Python
